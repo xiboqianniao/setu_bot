@@ -14,7 +14,7 @@ A [HoshinoBot](https://github.com/Ice-Cirno/HoshinoBot) plugin.
 本项目同时也有网页端 http://saki.fumiama.top/
 
 注意：
-1. 使用网页端注册需要密码，请在lib.py的Config类的初始化部分的key一项中填入密码，如果您不知道密码，请不要使用
+1. 使用网页端注册需要密码，请在lib.py的Config类的初始化部分的key一项中填入密码，如果您不知道密码，请不要使用（online一项改为false）
 
 
 ## 功能介绍
@@ -47,6 +47,6 @@ A [HoshinoBot](https://github.com/Ice-Cirno/HoshinoBot) plugin.
 
 3. 打开`hoshino/config/`文件夹中的`__bot__.py`文件，在`MODULES_ON`中加入一行`'setu_ai',`
 
-4. 在lib.py的Config类的初始化部分的key一项中填入密码
+4. 在lib.py的Config类的初始化部分的key一项中填入密码或者online一项改为false
 
 5. 现在可以正常使用了~
