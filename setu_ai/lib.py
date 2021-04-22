@@ -21,7 +21,7 @@ class Config():
         data.write({
             'host': r'http://saki.fumiama.top/',
             'online': True,
-            'key': '关婴',
+            'key': '', # 在这里填入密码
             'sign': 'signup',
             'get': 'pick',
             'score': 'vote',
@@ -65,8 +65,8 @@ class Config():
 class User():
     data = R.data('setu_test/user.json', 'json')
     if not data.exist:
-        data.write({'3036995449': {
-            'name': '弲法',
+        data.write({'00000': {
+            'name': '',
             'gcount': 0,
             'scount': 0,
             'ucount': 0,
