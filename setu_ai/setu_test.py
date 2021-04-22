@@ -185,7 +185,7 @@ async def spinfo(bot, ev: CQEvent):
         non = Pic.pics['online']
         noff = Pic.pics['offline']
         online = '开启✨' if Config.online else '关闭💤'
-        _spinfo = f'在线模式已{online}\n已从服务器获取{non}份涩图\n已从群友处获取{noff}份涩图'
+        _spinfo = f'在线模式已{online}\n已从服务器获取{non}份涩图\n已从群友处获取{noff}份涩图\n本插件已以GPL3.0开源https://github.com/LHXnois/setu_ai'
     else:
         user = User(uid)
         uuid = await user.getname
