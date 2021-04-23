@@ -23,8 +23,9 @@ class Config():
             'online': True,
             'key': '', # 在这里填入密码
             'sign': 'signup',
-            'get': 'pick',
+            'get': 'pick?',
             'score': 'vote',
+            'up': 'upload?uuid='
         })
     config = data.read
 
@@ -54,12 +55,15 @@ class Config():
         return self.host+self.value('sign')+'?{:0>10d}'.format(signkey)
 
     def pickurl(self, name):
-        return self.host+self.value('get')+'?'+name
+        return self.host+self.value('get')+name
 
     def scoreurl(self, name, img, score):
         img = img.split('.')[0]
         return self.host+self.value(
             'score')+f'?uuid={name}&img={img}&class={score}'
+
+    def upurl(self, name):
+        return self.host+self.value('up')+name
 
 
 class User():
@@ -287,14 +291,13 @@ class Pic():
                 'setu_test/upload', imgname).download(imginfo[imgname])
             imgname = img.path.split('\\')[-1]
             upedimg.append(imgname)
-            # files = {'img': open(img.path, 'rb')}
-            # url = host + 'upform'
-            # resp = await aiorequests.post(url, files=files)
-            # resp = await resp.text
-            # 怎么就不得行呢
+            with open(img.path, 'rb') as f:
+                url = Config().upurl(await user.getname)
+                resp = await aiorequests.post(url, data=f)
+                resp = await resp.text
             if self.addpic(imgname, 'off',
                            uid=uid,
-                           uptime=time.asctime()):
+                           uptime=time.asctime()) or resp == 'succ':
                 upcount += 1
                 user.addupinfo(imgname)
         user.addcount('u', upcount)
