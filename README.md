@@ -56,6 +56,6 @@ TODO:
 
 3. 打开`hoshino/config/`文件夹中的`__bot__.py`文件，在`MODULES_ON`中加入一行`'setu_ai',`
 
-4. 在lib.py的Config类的初始化部分的key一项中填入密码或者online一项改为false
+4. 在`lib.py`的`Config`类的初始化部分的`key`一项中填入密码或者`online`一项改为`false`
 
 5. 现在可以正常使用了~
