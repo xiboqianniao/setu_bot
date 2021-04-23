@@ -9,7 +9,14 @@ A [HoshinoBot](https://github.com/Ice-Cirno/HoshinoBot) plugin.
 
 机器人会随机发送一张涩图，用户回复这张图片打分，用户也可以自己上传图片
 
-本插件的目的是为研发涩图鉴定程序收集自己的数据集
+本插件目前的目的是为研发涩图鉴定程序收集自己的数据集
+
+>(最终目标大概是涩图币企划的qq群实例化
+
+TODO:
+- [x] 数据收集setu_test.py
+- [ ] 涩图自动打分setu_marker.py
+- [ ] ...
 
 本项目同时也有网页端 http://saki.fumiama.top/
 
@@ -39,7 +46,7 @@ A [HoshinoBot](https://github.com/Ice-Cirno/HoshinoBot) plugin.
 4. 私聊模式指令简单，可以高速看图打分，群聊为防止混乱指令严格，但可以大家一起交流xp
 
 ## 安装方式
-0. 首先你要有一个配置好的[个人重度魔改版hoshino](https://github.com/LHXnois/HoshinoBot/tree/Kokkorobot),但是本人无力撰写详细的部署说明，建议经验丰富者自行领悟
+0. 首先你要有一个配置好的[个人重度魔改版hoshino](https://github.com/LHXnois/HoshinoBot/tree/Kokkorobot)，但是本人无力撰写详细的部署说明，建议经验丰富者自行领悟
 
 1. clone或者下载此仓库的代码
 
