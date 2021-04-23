@@ -48,6 +48,8 @@ TODO:
 ## 安装方式
 0. 首先你要有一个配置好的[个人重度魔改版hoshino](https://github.com/LHXnois/HoshinoBot/tree/Kokkorobot)，但是本人无力撰写详细的部署说明，建议经验丰富者自行领悟
 
+> 不要看那个readme很详细，那个是远古时期的指南，很多内容已经过时了
+
 1. clone或者下载此仓库的代码
 
 2. 将setu_ai文件夹放入`hoshino/modules/`文件夹中
