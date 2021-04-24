@@ -78,7 +78,7 @@ class User():
             'simg': {
                 'online': [],
                 'offline': []
-        }}})
+            }}})
     user = data.read
 
     def __init__(self, uid: int) -> None:
@@ -112,9 +112,15 @@ class User():
 
     @property
     async def getname(self) -> str:
+        if not Config().online:
+            return 'None'
         if self.name == '':
-            resp = await aiorequests.get(Config().signurl)
-            self.name = await resp.text
+            try:
+                resp = await aiorequests.get(Config().signurl, timeout=10)
+                self.name = await resp.text
+            except Exception:
+                self.name = ''
+                Config().set('online', False)
             self.user[self.uid]['name'] = self.name
             self.save
         return self.name
@@ -149,7 +155,7 @@ class User():
     async def nickname(self) -> str:
         if 'nickname' not in self.user[self.uid]:
             self.user[self.uid]['nickname'] = await Gm.user_info(
-                                                        int(self.uid), 'nickname')
+                                                    int(self.uid), 'nickname')
             self.save
         return self.user[self.uid]['nickname']
 
@@ -193,7 +199,8 @@ class Rec():
 
     @classmethod
     def get(self, msgid: int) -> dict:
-        return self.rec['data'][str(msgid)] if str(msgid) in self.rec['data'] else False
+        return self.rec['data'][str(msgid)] if str(
+            msgid) in self.rec['data'] else False
 
     @classmethod
     def clone(self, msgid: int, oid: int):
@@ -245,8 +252,12 @@ class Pic():
         if ptype == 'on' and Config().online:
             name = await user.getname
             url = Config().scoreurl(name, img, score)
-            resp = await aiorequests.get(url)
-            resp = await resp.text
+            try:
+                resp = await aiorequests.get(url, timeout=10)
+                resp = await resp.text
+            except Exception:
+                resp = '服务器请求出错，已关闭在线模式🚧'
+                Config().set('online', False)
             return resp
         else:
             return 'succ'
@@ -260,8 +271,12 @@ class Pic():
             online = True
         if online and Config().online:
             url = Config().pickurl(await user.getname)
-            resp = await aiorequests.get(url)
-            img = await resp.text
+            try:
+                resp = await aiorequests.get(url, timeout=10)
+                img = await resp.text
+            except Exception:
+                img = 'null'
+                Config().set('online', False)
             imgname = f'{unquote(img)}.webp'
             pic = R.tem_img('setu_test/online', imgname)
             if self.addpic(imgname):
@@ -276,9 +291,9 @@ class Pic():
             pic = R.tem_img('setu_test/upload', imgname)
             upid = self.pics['offlinepic'][imgname]['uid']
             nickname = await User(upid).nickname
-            source = f'uploader: {nickname}({upid})'
+            source = f'uploader: {nickname}({upid})' if upid != 1772980640 else f'uploader: {nickname}'
         user.addcount('g')
-        pic = f'{pic.cqcode}\n{source}'
+        pic = f'{pic.cqcode}\n{source}' if imgname != 'null.webp' else '服务器请求出错，已关闭在线模式🚧'
         return (pic, (imgname, online))
 
     @classmethod
@@ -286,15 +301,21 @@ class Pic():
         user = User(uid)
         upcount = 0
         upedimg = []
+        resp = ''
         for imgname in imginfo:
             img = await R.tem_img(
                 'setu_test/upload', imgname).download(imginfo[imgname])
             imgname = img.path.split('\\')[-1]
             upedimg.append(imgname)
-            with open(img.path, 'rb') as f:
-                url = Config().upurl(await user.getname)
-                resp = await aiorequests.post(url, data=f)
-                resp = await resp.text
+            if Config().online:
+                with open(img.path, 'rb') as f:
+                    url = Config().upurl(await user.getname)
+                    try:
+                        resp = await aiorequests.post(url, data=f, timeout=10)
+                        resp = await resp.text
+                    except Exception:
+                        resp = '服务器请求出错，已关闭在线模式🚧'
+                        Config().set('online', False)
             if self.addpic(imgname, 'off',
                            uid=uid,
                            uptime=time.asctime()) or resp == 'succ':
@@ -302,7 +323,9 @@ class Pic():
                 user.addupinfo(imgname)
         user.addcount('u', upcount)
         Rec.add(msgid, tuple(upedimg), False)
-        return upcount
+        if resp:
+            resp += '\n'
+        return upcount, resp
 
 
 class PicListener:
