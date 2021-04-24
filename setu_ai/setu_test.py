@@ -1,4 +1,5 @@
 import hoshino
+import asyncio
 from hoshino import Service, priv
 from hoshino.typing import CQEvent
 from hoshino.util import FreqLimiter
@@ -22,10 +23,10 @@ sv = Service('setu_ai', bundle='setu', help_=HELP)
 _freq = FreqLimiter(2.5)
 pls = PicListener()
 Config = Config()
+DEBUG = True
 
-
-@sv.on_rex(r'^(([色涩瑟]图)|setu)|[来发给]((?P<num>\d+)|(?:.*))[张个幅点份丶][色涩瑟]图?$')
-async def checkswitch(bot, ev: CQEvent):
+@sv.on_rex(r'^(([色涩瑟]图)|setu)|[来发给]((?P<num>\d+)|(?:.*))[张个幅点份丶\.、][色涩瑟]图?(?P<online>online)?$')
+async def givemesetu(bot, ev: CQEvent):
     uid = ev.user_id
     if not _freq.check(uid):
         await bot.finish(ev, '您冲得太快了，请慢一点💦')
@@ -45,15 +46,24 @@ async def checkswitch(bot, ev: CQEvent):
     else:
         num = 1
     for _ in range(num):
-        online = choice((True, False))
+        if ev['match'].group('online'):
+            if Config.online:
+                online = True
+            else:
+                await bot.finish(ev, '在线模式未开启')
+        else:
+            online = choice((True, False))
         if (pic := await Pic.getpic(uid, online)) is None:
             await bot.finish(ev, '已经没有更多图片了！')
         msginfo = await bot.send(ev, pic[0])
-        Rec.add(msginfo['message_id'], *pic[1])
+        if pic[1][0] != 'null.webp':
+            Rec.add(msginfo['message_id'], *pic[1])
+        else:
+            await switchstate(ev, False)
 
 
 @sv.on_replay(startwith='打分')
-async def testrep(bot, ev: CQEvent):
+async def scoresetu(bot, ev: CQEvent):
     msgid = ev['quote_message']['message_id']
     if not Rec.get(msgid):
         return
@@ -75,6 +85,8 @@ async def testrep(bot, ev: CQEvent):
             count += 1
         else:
             msg.append(f'{f"第{i+1}张图片" if len(resp) > 1 else ""}评价失败惹...{res}')
+            if '🚧' in res:
+                await switchstate(ev, False)
     if count:
         msg.append(f'{f"{count}张图片" if count > 1 else ""}评价成功！感谢反馈')
     Rec.clone(ev.message_id, msgid)
@@ -90,9 +102,11 @@ async def upload(bot, ev: CQEvent):
         if i['type'] == 'image':
             imginfo[i['data']['file']] = i['data']['url']
     if imginfo:
-        count = await Pic.uppic(uid, ev.message_id, imginfo)
+        count, resp = await Pic.uppic(uid, ev.message_id, imginfo)
         a = '张' if count < 2 else '些'
-        await bot.finish(ev, f'成功上传{count}张图片, 现在可以回复这{a}图片打分了')
+        await bot.finish(ev, f'{resp}成功上传{count}张图片, 现在可以回复这{a}图片打分了')
+        if '🚧' in resp:
+            await switchstate(ev, False)
     else:
         gid = ev.group_id
         kw = ev.message.extract_plain_text().strip()
@@ -116,9 +130,11 @@ async def picmessage(bot, ev: CQEvent):
         if i['type'] == 'image':
             imginfo[i['data']['file']] = i['data']['url']
     if imginfo:
-        count = await Pic.uppic(uid, ev.message_id, imginfo)
+        count, resp = await Pic.uppic(uid, ev.message_id, imginfo)
         a = '张' if count < 2 else '些'
-        await bot.send(ev, f'成功上传{count}张图片🎈, 现在可以回复这{a}图片打分了')
+        await bot.send(ev, f'{resp}成功上传{count}张图片🎈, 现在可以回复这{a}图片打分了')
+        if '🚧' in resp:
+            await switchstate(ev, False)
 
 hbot = hoshino.get_bot()
 @hbot.on_message('private')
@@ -126,7 +142,8 @@ async def picmessagep(ev):
     uid = ev.user_id
     if str(ev.message) in ('开始评分', '开始'):
         pls.turn_on(0, uid)
-        await hbot.send(ev, '🎉无情评价机器启动！私聊模式直接回复分数，打分后立刻下一张图\n结束打分请发送“结束”')
+        await hbot.send(ev, '🎉无情评价机器将在5s后启动！私聊模式直接回复分数，打分后立刻下一张图\n结束打分请发送“结束”')
+        await asyncio.sleep(3)
     elif str(ev.message) in ('结束', '结束评分'):
         pls.turn_off(0, uid)
         pls.rec[uid] = ()
@@ -137,20 +154,30 @@ async def picmessagep(ev):
         msg = str(ev.message).strip().strip('打分').strip('分')
         if msg in Pic.score_class:
             resp = await Pic.scorepic(
-                uid, Pic.score_class[msg], info[0], info[1])
+                str(uid), Pic.score_class[msg], info[0], info[1])
             if resp == 'succ':
                 await hbot.send(ev, '评价成功！感谢反馈')
             else:
                 await hbot.send(ev, f'评价失败惹...{resp}')
+                if '🚧' in resp:
+                    await switchstate(ev, False)
         else:
             await hbot.finish(ev, '💦只支持评价0, 1, 2, 4, 8, 16, 32, 64分哦')
     online = choice((True, False))
+    await asyncio.sleep(2)
     await hbot.send(ev, '💦正在扒拉图片...')
-    if (pic := await Pic.getpic(uid, online)) is None:
+    if not online:
+        await asyncio.sleep(1)
+    if (pic := await Pic.getpic(str(uid), online)) is None:
         await hbot.finish(ev, '已经没有更多图片了！')
         pls.turn_off(0, uid)
     await hbot.send(ev, pic[0])
-    pls.arec(uid, *pic[1])
+    if pic[1][0] != 'null.webp':
+        pls.arec(uid, *pic[1])
+    else:
+        pls.rec[uid] = ()
+        await hbot.finish(ev, '===press any key===')
+        await switchstate(ev, False)
 
 @sv.on_fullmatch(('网页版', '网页端'))
 async def rhost(bot, ev: CQEvent):
@@ -159,7 +186,7 @@ async def rhost(bot, ev: CQEvent):
 
 @sv.on_suffix('在线模式')
 async def setv(bot, ev: CQEvent):
-    if not priv.check_priv(ev, priv.ADMIN):
+    if not priv.check_priv(ev, priv.PYUSER):
         return
     kw = ev.message.extract_plain_text().strip()
     if kw in ('开启'):
@@ -167,6 +194,7 @@ async def setv(bot, ev: CQEvent):
     elif kw in ('关闭'):
         online = False
     Config.set('online', online)
+    await switchstate(ev, online)
     await bot.send(ev, '已'+kw)
 
 
@@ -184,8 +212,9 @@ async def spinfo(bot, ev: CQEvent):
     if uid == ev.self_id:
         non = Pic.pics['online']
         noff = Pic.pics['offline']
+        rope = Config.config['rope']
         online = '开启✨' if Config.online else '关闭💤'
-        _spinfo = f'在线模式已{online}\n已从服务器获取{non}份涩图\n已从群友处获取{noff}份涩图\n本插件已以GPL3.0开源https://github.com/LHXnois/setu_ai'
+        _spinfo = f'在线模式已{online}\n已从服务器获取{non}份涩图\n已从群友处获取{noff}份涩图\n本插件已以GPL3.0开源{rope}'
     else:
         user = User(uid)
         uuid = await user.getname
@@ -194,3 +223,10 @@ async def spinfo(bot, ev: CQEvent):
         sc = user.count('s')
         _spinfo = f'{name}({uid})：\n网页端用户名：{uuid}\n共叫了{gc}份涩图💦\n上传了{uc}份涩图🎈\n为{sc}份涩图打了分✔'
     await bot.send(ev, _spinfo)
+
+
+async def switchstate(ev, s):
+    if DEBUG:
+        s = '(online)' if s else '(offline)'
+        if await Gm(ev).groupname_set(f'自助评分终端机{s}') == Gm.PRIV_NOT_ENOUGH:
+            Gm(ev).card_set(Gm(ev).sid, hoshino.config.NICKNAME[0]+s)
